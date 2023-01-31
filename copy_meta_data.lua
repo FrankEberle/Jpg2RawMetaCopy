@@ -63,6 +63,8 @@ local function doCopy(funcArgs)
     local matched = 0
     local copyStarRating = funcArgs.copyStarRating
     local copyColorLabel = funcArgs.copyColorLabel
+    local copyGpsData = funcArgs.copyGpsData
+    local copyTitle = funcArgs.copyTitle
     local dryRun = funcArgs.dryRun
     local catalog = LrApplication.activeCatalog()
     local photos = catalog:getTargetPhotos()
@@ -70,7 +72,13 @@ local function doCopy(funcArgs)
         for _, sourcePhoto in ipairs(photos) do
             if sourcePhoto:getFormattedMetadata("fileType") == "JPEG" then
                 processed = processed + 1
-                local basename = LrPathUtils.removeExtension(sourcePhoto:getFormattedMetadata("fileName")) .. "."
+                local jpegName = sourcePhoto:getFormattedMetadata("fileName")
+                local srcPath = LrPathUtils.child(sourcePhoto:getFormattedMetadata("folderName"), jpegName)
+                local basename = LrPathUtils.removeExtension(jpegName) .. "."
+                if #protocol ~= 0 then
+                    protocol = protocol .. "\n"
+                end
+                protocol = protocol .. "Source: " .. srcPath .. "\n"
                 logger:debug(basename)
                 local matches = catalog:findPhotos {
                     searchDesc = {
@@ -96,12 +104,18 @@ local function doCopy(funcArgs)
                     }
                 }
                 if #matches > 0 then
-                    starRating = sourcePhoto:getRawMetadata("rating")
-                    colorLabel = sourcePhoto:getRawMetadata("colorNameForLabel")
+                    local starRating = sourcePhoto:getRawMetadata("rating")
+                    local colorLabel = sourcePhoto:getRawMetadata("colorNameForLabel")
+                    local gps = sourcePhoto:getRawMetadata("gps")
+                    local gpsAltitude = sourcePhoto:getRawMetadata("gpsAltitude")
+                    local title = sourcePhoto:getFormattedMetadata("title")
                     for _, targetPhoto in pairs(matches) do
                         if targetPhoto:getRawMetadata("isVirtualCopy") == false then
                             matched = matched + 1
-                            logger:debug("Target: " .. targetPhoto:getFormattedMetadata("fileName"))
+                            local rawName = targetPhoto:getFormattedMetadata("fileName")
+                            local dstPath = LrPathUtils.child(targetPhoto:getFormattedMetadata("folderName"), rawName)
+                            logger:debug("Target: " .. rawName)
+                            protocol = protocol .. "  Target: " .. dstPath .. "\n"
                             if not dryRun then
                                 if copyStarRating then
                                     logger:debug("Copying star rating")
@@ -111,16 +125,81 @@ local function doCopy(funcArgs)
                                     logger:debug("Copying color label")
                                     targetPhoto:setRawMetadata("colorNameForLabel", colorLabel)
                                 end
+                                if copyGpsData then
+                                    logger:debug("Copying GPS data")
+                                    targetPhoto:setRawMetadata("gps", gps)
+                                    targetPhoto:setRawMetadata("gpsAltitude", gpsAltitude)
+                                end
+                                if copyTitle then
+                                    logger:debug("Copying title")
+                                    targetPhoto:setRawMetadata("title", title)
+                                end
                             end
                         end
                     end
                 else
                     logger:debug("not found")
+                    protocol = protocol .. "  no RAW/DNG found\n"
                 end
             end
         end
     end)
+    protocol = string.format("Summary: %d JPEGs processed, %d RAWs matched", processed, matched) .. "\n\n" .. protocol
     return processed, matched, protocol
+end
+
+
+local function countJpgInSelection()
+    local count = 0
+    local catalog = LrApplication.activeCatalog()
+    local photos = catalog:getTargetPhotos()
+    for _, sourcePhoto in ipairs(photos) do
+        if sourcePhoto:getFormattedMetadata("fileType") == "JPEG" then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+
+local function protocolDialog(protocol)
+    local f = LrView.osFactory()
+    local close
+    local dialog = f:column {
+        margin = 10,
+        spacing = 10,
+        f:row {
+            f:scrolled_view {
+                width = 800,
+                height = 500,
+                horizontal_scroller = true,
+                vertical_scroller,
+                f:static_text  {
+                    title = protocol
+                },
+            }
+        },
+        f:row {
+            f:push_button {
+                place_horizontal = 1,
+                title = "Close",
+                action = function()
+                    close()
+                end
+            }
+        }
+    }
+    LrDialogs.presentFloatingDialog(
+        _PLUGIN,
+        {
+            title = "Protocol",
+            contents = dialog,
+            blockTask = true,
+            onShow = function(winFuncs)
+                close = winFuncs.close
+            end
+        }
+    )
 end
 
 
@@ -146,11 +225,11 @@ local function settingsDialog(properties)
                 },
                 f:column {
                     f:checkbox {
-                        title = "Title (TODO)",
+                        title = "Title",
                         value = LrView.bind("copyTitle"),
                     },
                     f:checkbox {
-                        title = "GPS Data (TODO)",
+                        title = "GPS Data",
                         value = LrView.bind("copyGpsData"),
                     },    
                 }    
@@ -180,7 +259,6 @@ local function settingsDialog(properties)
         {
             title = "Copy Meta Data",
             contents = dialog,
-            blockTask = true,
         }
     )
     return "ok" == res
@@ -193,24 +271,32 @@ local function main()
         context:addFailureHandler(function(status, err)
             LrDialogs.message("Internal Error: " .. err)
         end)
-        local properties = LrBinding.makePropertyTable(context)
-        properties.showProtocol = false
-        properties.dryRun = false
-        local options = {"dryRun"}
-        local metaTypes = {"copyStarRating", "copyColorLabel", "copyTitle", "copyGpsData"}
-        for _, key in ipairs(metaTypes) do
-            properties[key] = true
-        end
-        local res = settingsDialog(properties)
-        if res then
-            args = {}
-            for _, key in ipairs(mergeTables(options, metaTypes)) do
-                logger:debug("Arg: " .. key)
-                logger:debug(properties[key])
-                args[key] = properties[key]
+        if countJpgInSelection() == 0 then
+            LrDialogs.message("No JPEG(s) selected", nil, "info")
+        else
+            local properties = LrBinding.makePropertyTable(context)
+            properties.showProtocol = false
+            properties.dryRun = false
+            local options = {"dryRun"}
+            local metaTypes = {"copyStarRating", "copyColorLabel", "copyTitle", "copyGpsData"}
+            for _, key in ipairs(metaTypes) do
+                properties[key] = true
             end
-            local processed, matched, protocol = doCopy(args)
-            LrDialogs.showBezel(string.format("Completed: %d JPEGs processed, %d RAWs matched", processed, matched), 5)
+            local res = settingsDialog(properties)
+            if res then
+                args = {}
+                for _, key in ipairs(mergeTables(options, metaTypes)) do
+                    logger:debug("Arg: " .. key)
+                    logger:debug(properties[key])
+                    args[key] = properties[key]
+                end
+                local processed, matched, protocol = doCopy(args)
+                if properties.showProtocol then
+                    protocolDialog(protocol)
+                else
+                    LrDialogs.showBezel(string.format("Completed: %d JPEGs processed, %d RAWs matched", processed, matched), 5)
+                end
+            end
         end
         logger:debug("main() end")
     end)

@@ -21,3 +21,9 @@ Das Plugin sucht in den ausgewählen Bildern (oder dem aktuellen Filmsteifen fal
 Für jedes gefundene Bild wird nach einem entsprechenden RAW- oder DNG-Bild gesucht. Hierbei wird nach Bildern gesucht, die den gleichen
 Basisnamen haben. Für jede entsprechende RAW- bzw. DNG-Datei werden die ausgewählten Meta-Daten kopiert.
 
+## Unterstützte Meta-Daten
+* Bewertung (Sterne)
+* Farb-Label
+* Titel
+* GPS-Daten (Koordinaten und Höhe)
+
