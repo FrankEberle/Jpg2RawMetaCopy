@@ -65,6 +65,10 @@ local function doCopy(funcArgs)
     local copyColorLabel = funcArgs.copyColorLabel
     local copyGpsData = funcArgs.copyGpsData
     local copyTitle = funcArgs.copyTitle
+    local copyCopyright = funcArgs.copyCopyright
+    local copyCaption = funcArgs.copyCaption
+    local copyPickStatus = funcArgs.copyPickStatus
+    local copyKeywords = funcArgs.copyKeywords
     local dryRun = funcArgs.dryRun
     local catalog = LrApplication.activeCatalog()
     local photos = catalog:getTargetPhotos()
@@ -109,6 +113,10 @@ local function doCopy(funcArgs)
                     local gps = sourcePhoto:getRawMetadata("gps")
                     local gpsAltitude = sourcePhoto:getRawMetadata("gpsAltitude")
                     local title = sourcePhoto:getFormattedMetadata("title")
+                    local copyright = sourcePhoto:getFormattedMetadata("copyright")
+                    local caption = sourcePhoto:getFormattedMetadata("caption")
+                    local pickStatus = sourcePhoto:getRawMetadata("pickStatus")
+                    local keywords = sourcePhoto:getRawMetadata("keywords")
                     for _, targetPhoto in pairs(matches) do
                         if targetPhoto:getRawMetadata("isVirtualCopy") == false then
                             matched = matched + 1
@@ -118,21 +126,31 @@ local function doCopy(funcArgs)
                             protocol = protocol .. "  Target: " .. dstPath .. "\n"
                             if not dryRun then
                                 if copyStarRating then
-                                    logger:debug("Copying star rating")
                                     targetPhoto:setRawMetadata("rating", starRating)
                                 end
                                 if copyColorLabel then
-                                    logger:debug("Copying color label")
                                     targetPhoto:setRawMetadata("colorNameForLabel", colorLabel)
                                 end
                                 if copyGpsData then
-                                    logger:debug("Copying GPS data")
                                     targetPhoto:setRawMetadata("gps", gps)
                                     targetPhoto:setRawMetadata("gpsAltitude", gpsAltitude)
                                 end
                                 if copyTitle then
-                                    logger:debug("Copying title")
                                     targetPhoto:setRawMetadata("title", title)
+                                end
+                                if copyCaption then
+                                    targetPhoto:setRawMetadata("caption", caption)
+                                end
+                                if copyCopyright then
+                                    targetPhoto:setRawMetadata("copyright", copyright)
+                                end
+                                if copyPickStatus then
+                                    targetPhoto:setRawMetadata("pickStatus", pickStatus)
+                                end
+                                if copyKeywords then
+                                    for _, kw in ipairs(keywords) do
+                                        targetPhoto:addKeyword(kw)
+                                    end
                                 end
                             end
                         end
@@ -144,7 +162,20 @@ local function doCopy(funcArgs)
             end
         end
     end)
-    protocol = string.format("Summary: %d JPEGs processed, %d RAWs matched", processed, matched) .. "\n\n" .. protocol
+    local protoHdr = ""
+    if dryRun then protoHdr = protoHdr .. "!!! Dry Run !!!\n\n" end
+    protoHdr = protoHdr .. string.format("Summary: %d JPEGs processed, %d RAWs matched\n\n", processed, matched)
+    protoHdr = protoHdr .. "Selected meta data:\n"    
+    if copyStarRating then protoHdr = protoHdr .. "  * Star Rating\n" end
+    if copyColorLabel then protoHdr = protoHdr .. "  * Color Label\n" end
+    if copyPickStatus then protoHdr = protoHdr .. "  * Pick Status\n" end
+    if copyTitle then protoHdr = protoHdr .. "  * Title\n" end
+    if copyCaption then protoHdr = protoHdr .. "  * Caption\n" end
+    if copyKeywords then protoHdr = protoHdr .. "  * Keywords\n" end
+    if copyCopyright then protoHdr = protoHdr .. "  * Copyright\n" end
+    if copyGpsData then protoHdr = protoHdr .. "  * GPS Data\n" end
+    protoHdr = protoHdr .. "\n"
+    protocol =  protoHdr .. protocol
     return processed, matched, protocol
 end
 
@@ -222,6 +253,10 @@ local function settingsDialog(properties)
                         title = "Color Label",
                         value = LrView.bind("copyColorLabel"),
                     },    
+                    f:checkbox {
+                        title = "Pick Status",
+                        value = LrView.bind("copyPickStatus"),
+                    },    
                 },
                 f:column {
                     f:checkbox {
@@ -229,10 +264,24 @@ local function settingsDialog(properties)
                         value = LrView.bind("copyTitle"),
                     },
                     f:checkbox {
+                        title = "Caption",
+                        value = LrView.bind("copyCaption"),
+                    },
+                    f:checkbox {
+                        title = "Keywords",
+                        value = LrView.bind("copyKeywords"),
+                    },    
+                    f:checkbox {
+                        title = "Copyright",
+                        value = LrView.bind("copyCopyright"),
+                    },    
+                },
+                f:column {
+                    f:checkbox {
                         title = "GPS Data",
                         value = LrView.bind("copyGpsData"),
                     },    
-                }    
+                }
             }
         },
         f:group_box {
@@ -278,7 +327,8 @@ local function main()
             properties.showProtocol = false
             properties.dryRun = false
             local options = {"dryRun"}
-            local metaTypes = {"copyStarRating", "copyColorLabel", "copyTitle", "copyGpsData"}
+            local metaTypes = {"copyStarRating", "copyColorLabel", "copyTitle", "copyGpsData",
+              "copyKeywords", "copyCaption", "copyPickStatus", "copyCopyright"}
             for _, key in ipairs(metaTypes) do
                 properties[key] = true
             end

@@ -25,5 +25,9 @@ Basisnamen haben. Für jede entsprechende RAW- bzw. DNG-Datei werden die ausgew�
 * Bewertung (Sterne)
 * Farb-Label
 * Titel
+* Bildunterschrift (Caption)
+* Copyright
+* Flagge (ausgewählt, abgelehnt)
+* Schlagworte
 * GPS-Daten (Koordinaten und Höhe)
 
