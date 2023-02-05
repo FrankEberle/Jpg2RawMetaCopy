@@ -34,4 +34,8 @@ return {
             file = 'copy_meta_data.lua',
         },
     },
+    VERSION = {
+        major = 0, minor = 0, revision = 0,
+        display = "00.00.01"
+    },
 }
