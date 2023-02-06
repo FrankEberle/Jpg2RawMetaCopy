@@ -79,6 +79,7 @@ local function doCopy(funcArgs)
                 local jpegName = sourcePhoto:getFormattedMetadata("fileName")
                 local srcPath = LrPathUtils.child(sourcePhoto:getFormattedMetadata("folderName"), jpegName)
                 local basename = LrPathUtils.removeExtension(jpegName) .. "."
+                local dateTimeOriginal = sourcePhoto:getRawMetadata("dateTimeOriginal")
                 if #protocol ~= 0 then
                     protocol = protocol .. "\n"
                 end
@@ -103,6 +104,11 @@ local function doCopy(funcArgs)
                                 value = "DNG",
                             },
                             combine = "union"
+                        },
+                        {
+                            criteria = "captureTime",
+                            operation = "==",
+                            value = dateTimeOriginal,
                         },
                         combine = "intersect"
                     }
