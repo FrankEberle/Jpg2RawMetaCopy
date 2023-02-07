@@ -70,12 +70,16 @@ local function doCopy(funcArgs)
     local copyPickStatus = funcArgs.copyPickStatus
     local copyKeywords = funcArgs.copyKeywords
     local dryRun = funcArgs.dryRun
+    local copySettings = funcArgs.copySettings
     local catalog = LrApplication.activeCatalog()
     local photos = catalog:getTargetPhotos()
     catalog:withWriteAccessDo("copyMeta", function()
         for _, sourcePhoto in ipairs(photos) do
             if sourcePhoto:getFormattedMetadata("fileType") == "JPEG" then
                 processed = processed + 1
+                if funcArgs.copySettings then
+                    sourcePhoto:copySettings()
+                end
                 local jpegName = sourcePhoto:getFormattedMetadata("fileName")
                 local srcPath = LrPathUtils.child(sourcePhoto:getFormattedMetadata("folderName"), jpegName)
                 local basename = LrPathUtils.removeExtension(jpegName) .. "."
@@ -126,6 +130,9 @@ local function doCopy(funcArgs)
                     for _, targetPhoto in pairs(matches) do
                         if targetPhoto:getRawMetadata("isVirtualCopy") == false then
                             matched = matched + 1
+                            if funcArgs.copySettings then
+                                targetPhoto:pasteSettings()
+                            end            
                             local rawName = targetPhoto:getFormattedMetadata("fileName")
                             local dstPath = LrPathUtils.child(targetPhoto:getFormattedMetadata("folderName"), rawName)
                             logger:debug("Target: " .. rawName)
@@ -181,6 +188,9 @@ local function doCopy(funcArgs)
     if copyCopyright then protoHdr = protoHdr .. "  * Copyright\n" end
     if copyGpsData then protoHdr = protoHdr .. "  * GPS Data\n" end
     protoHdr = protoHdr .. "\n"
+    if funcArgs.copySettings then
+        protoHdr = protoHdr .. "Copy Settings\n\n"
+    end
     protocol =  protoHdr .. protocol
     return processed, matched, protocol
 end
@@ -300,13 +310,17 @@ local function settingsDialog(properties)
                         title = "Show Protocol",
                         value = LrView.bind("showProtocol"),
                     },        
-                },
-                f:column {
                     f:checkbox {
                         title = "Dry-Run",
                         value = LrView.bind("dryRun"),
                     },        
-                }
+                },
+                f:column {
+                    f:checkbox {
+                        title = "Copy Settings",
+                        value = LrView.bind("copySettings"),
+                    },        
+                },
             }
         }
     }
@@ -332,7 +346,8 @@ local function main()
             local properties = LrBinding.makePropertyTable(context)
             properties.showProtocol = false
             properties.dryRun = false
-            local options = {"dryRun"}
+            properties.copySettings = false
+            local options = {"dryRun", "copySettings"}
             local metaTypes = {"copyStarRating", "copyColorLabel", "copyTitle", "copyGpsData",
               "copyKeywords", "copyCaption", "copyPickStatus", "copyCopyright"}
             for _, key in ipairs(metaTypes) do

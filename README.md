@@ -31,3 +31,7 @@ Basisnamen haben. Für jede entsprechende RAW- bzw. DNG-Datei werden die ausgew�
 * Schlagworte
 * GPS-Daten (Koordinaten und Höhe)
 
+## Kopieren der Entwicklungs-Einstellungen
+Neben den Meta-Daten kann das Plugin ebenfalls die Enwicklungs-Einstellungen vom JPEG zum RAW/DNG kopieren. Dies kann beispielsweise dazu genutzt
+werden, unterwegs Bearbeitungen in LR Mobile am JPEG zu "skizzieren" und diese später in LR Classic am RAW/DNG zu verfeinern.
+
