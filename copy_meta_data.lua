@@ -35,16 +35,26 @@ local LrFunctionContext = import "LrFunctionContext"
 local LrView = import "LrView"
 local LrBinding = import "LrBinding"
 
-
+-- Debugging is enabled by placing the file debug.txt in the plugin's directory.
+-- If the file contents start with 'print', the output is sent to the Windows
+-- debugger instead of a log file. On Windows the log file is located at
+-- <UserDir>\Documents\LrClassicLogs\de.frank-eberle.Jpg2RawMetaCopy.log.
 local logger = LrLogger(_PLUGIN.id)
-logger:enable('logfile')
-
-
-local function firstUpper(str)
-    return (str:gsub("^%l", string.upper))
+local dbgFlagFile = LrPathUtils.child(_PLUGIN.path, "debug.txt")
+if LrFileUtils.exists(dbgFlagFile) == "file" then
+    local dbg = LrFileUtils.readFile(dbgFlagFile)
+    if string.sub(dbg, 1, 5) == "print" then
+        logger:enable('print')
+    else
+        logger:enable('logfile')
+    end
 end
 
-
+--- Merge two integer-indexed tables into one table
+--
+-- @param t1 (table) First table
+-- @param t2 (table) Second table
+-- @return (table) Merged tables
 local function mergeTables(t1, t2)
     local target = {}
     for _, v in ipairs(t1) do
@@ -57,6 +67,11 @@ local function mergeTables(t1, t2)
 end
 
 
+--- Performs the actual meta-data copy operation
+--
+-- @param funcArgs (table) Table with kewyord arguments
+-- @return (table) Integer-indexed table containing: number of processed images,
+--   number of matched images, protocol
 local function doCopy(funcArgs)
     local protocol = ""
     local processed = 0
@@ -196,6 +211,9 @@ local function doCopy(funcArgs)
 end
 
 
+--- Retrieve the number of JPEG images in the current active LR selection
+--
+-- @return (integer) Number of JPEGs
 local function countJpgInSelection()
     local count = 0
     local catalog = LrApplication.activeCatalog()
@@ -209,6 +227,9 @@ local function countJpgInSelection()
 end
 
 
+--- Displays a non-modal dialog to present the protocol
+--
+-- @param prototol (string) Protocol text to be displayed
 local function protocolDialog(protocol)
     local f = LrView.osFactory()
     local close
@@ -250,6 +271,14 @@ local function protocolDialog(protocol)
 end
 
 
+--- Displays a modal dialog presenting the options for the copy operation
+--
+-- A property table must be passed to the function. The property table
+-- contains the initial state/contents of the input elements. It is also used
+-- to return the user's selection.
+
+-- @param properties (table) Property table to be bound to the input form
+-- @return (boolean) TRUE if the OK button was pressed, FALSE otherwise.
 local function settingsDialog(properties)
     local f = LrView.osFactory()
     local dialog = f:column {
@@ -334,6 +363,8 @@ local function settingsDialog(properties)
 end
 
 
+--- Plugin's main function
+--
 local function main()
     logger:debug("main() begin")
     LrFunctionContext.postAsyncTaskWithContext("copyMeta", function(context)
