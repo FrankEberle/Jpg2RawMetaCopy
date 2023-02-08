@@ -6,10 +6,12 @@ Copyright 2023 by Frank Eberle (https://www.frank-eberle.de)
 Bitte vor der Verwendung den Lightroom-Katalog sichern (sollte man ohnehin immer machen)!!!
 
 ## Installation
-1. Repository clonen oder Source herunterladen
-2. Verzeichnis in *Jpg2RawMetaCopy.lrplugin* umbenennen
+1. ZIP-Package von [GitHub](https://github.com/FrankEberle/Jpg2RawMetaCopy/releases) herunterladen
+2. Verzeichnis *Jpg2RawMetaCopy.lrplugin* aus ZIP an beliebiger Stelle entpacken
 3. Lightroom starten und *Datei > Zusatumodul-Manager* aufrufen
 4. *Hinzufügen* Button drücken und Verzeichnis *Jpg2RawMetaCopy.lrplugin* auswählen
+
+Alternative Repository von GitHub clonen und Verzeichnis in *Jpg2RawMetaCopy.lrplugin* umbenennen.
 
 ## Verwendung
 1. In der Bibliothek Bilder auswählen, wenn keine Bilder gewählt wurden, wird der aktuelle Filmstreifen verwendet
